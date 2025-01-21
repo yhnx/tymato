@@ -3,6 +3,8 @@ import uvicorn
 from io import BytesIO
 from PIL import Image
 import torch
+import torch.nn as nn
+from torchvision import models
 import torchvision.transforms as T
 
 # Constants
@@ -21,9 +23,38 @@ CLASSES = [
     "Powdery Mildew",
 ]
 
-# Load the full model
-model = torch.load(r"saved_model/trained_model_complete_v1.pth", map_location=torch.device("cpu"))
-model.eval()  # Set to evaluation mode
+
+# Creating a neural network using the resnet-50 Archtecture
+class RESNET(nn.Module):
+    def __init__(self, num_classes, freeze_backbone=True):
+
+        super(RESNET, self).__init__()
+        self.backbone = getattr(models, 'resnet50')(pretrained=True)
+
+        if freeze_backbone:
+            for param in self.backbone.parameters():
+                param.requires_grad = False
+
+        
+        in_features = self.backbone.fc.in_features
+        self.backbone.fc = nn.Sequential(
+             nn.Linear(in_features, 512), nn.BatchNorm1d(512), nn.ReLU(), nn.Dropout(0.3), nn.Linear(512, num_classes)
+        )
+        
+
+    def forward(self, x):
+        return self.backbone(x)
+    
+model = RESNET(
+    num_classes= len(CLASSES), 
+    freeze_backbone=True    # freeze pretrained weights initially
+)
+
+# Load the saved model weights
+model.load_state_dict(torch.load(r"saved_model/trained_model_v1.pth", map_location=torch.device("cpu")))
+
+# Set the model to evaluation mode
+model.eval()
 
 # Define image preprocessing
 def preprocess_image(image):
