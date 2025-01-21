@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tymato - Tomato Disease Identifier</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      /* Background Image */
+      .background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1; /* Sends it behind other content */
+      }
+
+      .background img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: blur(5px); /* Blur effect only on the background */
+      }
+
+      .container-wrapper {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        max-width: 500px;
+      }
+
+      .card {
+        backdrop-filter: blur(10px); /* Glass-like effect */
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.9); /* Transparent white */
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .logo {
+        display: block;
+        margin: 0 auto 20px auto;
+        max-width: 100%;
+        height: auto;
+        max-height: 80px; /* Restrict height if needed */
+      }
+
+      .drag-area {
+        border: 2px dashed #007bff;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        color: #007bff;
+        margin-top: 15px;
+      }
+
+      .drag-area.drag-over {
+        background-color: #e9f5ff;
+      }
+
+      .preview {
+        max-width: 100%;
+        margin-top: 15px;
+        display: none;
+      }
+
+      .error {
+        color: red;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Background Image -->
+    <div class="background">
+      <img src="\static\background.jpg" alt="Background" />
+    </div>
+
+    <!-- Main Content -->
+    <div class="container-wrapper">
+      <div class="card text-center">
+        <img src="\static\logo.png" alt="Tymato Logo" class="logo" />
+        <h3>Tymato</h3>
+        <p>Identify Tomato Diseases with Ease!</p>
+        <form id="uploadForm" enctype="multipart/form-data">
+          <div class="drag-area" id="dragArea">
+            Drag and drop an image here or click to upload
+            <input
+              type="file"
+              id="fileInput"
+              accept="image/*"
+              style="display: none"
+            />
+          </div>
+          <button type="submit" class="btn btn-success mt-3">
+            Submit Image
+          </button>
+        </form>
+        <img id="previewImage" class="preview" />
+        <div class="error" id="errorMessage"></div>
+      </div>
+    </div>
+
+    <script>
+      const dragArea = document.getElementById("dragArea");
+      const fileInput = document.getElementById("fileInput");
+      const previewImage = document.getElementById("previewImage");
+      const errorMessage = document.getElementById("errorMessage");
+      const uploadForm = document.getElementById("uploadForm");
+      let selectedFile = null;
+
+      // Handle drag-and-drop events
+      dragArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dragArea.classList.add("drag-over");
+      });
+
+      dragArea.addEventListener("dragleave", () => {
+        dragArea.classList.remove("drag-over");
+      });
+
+      dragArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dragArea.classList.remove("drag-over");
+        handleFile(e.dataTransfer.files[0]);
+      });
+
+      dragArea.addEventListener("click", () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener("change", (e) => {
+        handleFile(e.target.files[0]);
+      });
+
+      function handleFile(file) {
+        if (!file || !file.type.startsWith("image/")) {
+          showError("Please upload a valid image file.");
+          return;
+        }
+        selectedFile = file;
+        showError(""); // Clear error
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          previewImage.src = e.target.result;
+          previewImage.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function showError(message) {
+        errorMessage.textContent = message;
+      }
+
+      // Submit image to the /predict endpoint
+      uploadForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!selectedFile) {
+          showError("Please upload an image before submitting.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        try {
+          const response = await fetch("/predict", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error(`Error: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          alert(
+            `Prediction: ${result.class}\nConfidence: ${result.confidence}`
+          );
+        } catch (error) {
+          showError("An error occurred while processing the image.");
+          console.error(error);
+        }
+      });
+    </script>
+  </body>
+</html>
