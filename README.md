@@ -1,4 +1,4 @@
-# Tymato 🍅
+# ![image](https://github.com/yhnx/tymato/blob/main/server/static/logo.png)
 
 Tymato is a web application that leverages deep learning to identify tomato plant diseases from leaf images. It helps farmers and gardeners maintain healthy crops through early disease detection and diagnosis.
 
